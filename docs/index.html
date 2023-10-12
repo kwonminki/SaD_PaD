@@ -1,1 +1,295 @@
-test
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script type="text/javascript" async
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+    <title>Your Project Title</title>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="#abstract">Abstract</a></li>
+            <li><a href="#Introduce">Introduction</a></li>
+            <li><a href="#How">How it Works</a></li>
+            <li><a href="#findings">Findings</a></li>
+            <li><a href="#additional">StableDiffusion?</a></li>
+        </ul>
+    </nav>
+    
+    <section id="abstract">
+        <h2>Abstract</h2>
+        <p>When the training dataset comprises a 1:1 proportion of dogs to cats, a generative model that produces 1:1 dogs and cats better resembles the training species distribution than another model with 3:1 dogs and cats. Can we capture this phenomenon using existing metrics? Unfortunately, we cannot, because these metrics do not provide any interpretability beyond "diversity". In this context, we propose a new evaluation protocol that measures the divergence of a set of generated images from the training set regarding the <em>distribution of attribute strengths</em> as follows.</p>
+        <p>Single-attribute Divergence (SaD) measures the divergence regarding PDFs of a single attribute. Paired-attribute Divergence (PaD) measures the divergence regarding <em>joint</em> PDFs of a pair of attributes. They provide which attributes the models struggle. For measuring the attribute strengths of an image, we propose Heterogeneous CLIPScore (HCS) which measures the cosine similarity between image and text vectors with <em>heterogeneous initial points</em>.</p>
+        <p>With SaD and PaD, we reveal the following about existing generative models.</p>
+        <ul>
+            <li>ProjectedGAN generates implausible attribute relationships such as <code>baby</code> with <code>beard</code> even though it has competitive scores of existing metrics.</li>
+            <li>Diffusion models struggle to capture diverse colors in the datasets.</li>
+            <li>The larger sampling timesteps of latent diffusion model generate the more minor objects including <code>earrings</code> and <code>necklace</code>.</li>
+            <li>Stable Diffusion v1.5 better captures the attributes than v2.1. Our metrics lay a foundation for explainable evaluations of generative models.</li>
+        </ul>
+        
+    </section>
+    
+    <section id="Introduce">
+        <h2>Our metric has interpretability!</h2>
+        <h3>Model 2 is worse than Model 1 because it over-generates make-up, long hair, etc. </h3>
+    
+        <!-- Image -->
+        <img src="imgs/overall.png" alt="Overview image" class="center-image" />
+    
+        <!-- Paragraph 1 -->
+        <p><strong>Figure 1</strong> illustrates the evaluation metrics for two models with distinct properties. While Model 1’s generated images align closely with the training dataset, Model 2 exhibits a lack of diversity. Notably, in Figure 1a (gray box), Model 1 consistently outperforms Model 2 across all metrics. Yet, these metrics fall short in explicability; for example, they don’t highlight the overrepresentation of <code>long hair</code> and <code>makeup</code> in Model 2.</p>
+    
+        <!-- Paragraph 2 -->
+        <p>Addressing this gap, our paper proposes a methodology to quantify discrepancies between generated and training images, focusing on specific attributes. Figure 1b shows the concept of our alternative approach that measures the distribution of attribute strengths compared to the training set: while Model 1 offers a balanced attribute distribution akin to the training dataset, Model 2 overemphasizes <code>long hair</code> and underrepresents <code>beard</code>.</p>
+    </section>
+
+    <section id="How">
+        <h2>How it Works?</h2>
+    
+        <p>To construct metrics that quantify the differences between two sets of images in an intelligible way, we introduce Heterogeneous CLIPScore (HCS), an advanced variant of CLIPScore. Unlike CLIPScore, HCS captures the similarity between two modalities—image and text—by setting distinct starting points for text and image vectors.</p>
+    
+        <figure class="center-figure">
+            <img src="imgs/HSC.png" alt="HSC image" class="center-image" />
+            <figcaption>
+                <strong>Illustration of CLIPScore and HCS.</strong> (a) CLIPScore (CS) evaluates the similarity between 
+                \(V^{CS}_{img}\) and \(V^{CS}_{Text}\) from the coordinate origin, where the angle between the two vectors 
+                is bounded, resulting in a limited similarity value. (b) HCS gauges the similarity between 
+                \(V^{HCS}_{img}\) and \(V^{HCS}_{Text}\) using the defined means of images \(C_\mathcal{X}\) and texts 
+                \(C_\mathcal{A}\) as the origin, the range of similarity is unrestricted. (c) shows flexible values of 
+                HCS compared to CS.
+            </figcaption>
+        </figure>
+        
+
+        <p>With HCS, we roll out new evaluation protocols to align the attribute distribution between generated images and training data in the following manner:</p>
+        
+        <ol>
+            <li>Single-attribute Divergence (SaD) gauges the extent to which a generative model strays from the distribution of each attribute in the training data.</li>
+            <li>Paired-attribute Divergence (PaD) quantifies how much a generative model disrupts the relationship between attributes in the training data, such as the fact that "babies do not have beards."</li>
+        </ol>
+    
+        <p>With the metrics we've proposed, users can now discern which specific attributes (or attribute pairs) in the generated images diverge from those in the training images.</p>
+    </section>
+    
+    <section id="findings">
+        <h2>So, What Did We Uncover?</h2>
+        
+        <figure>
+            <figcaption>
+                <strong>Comparing the performance of generative models.</strong> We computed each generative model's performance on our metric with their official pretrained checkpoints on FFHQ. We used 50,000 images for both GT and the generated set. We used USER attributes for this experiment.
+            </figcaption>
+            <table border="1" style="width:100%; text-align:center;">
+                <tr>
+                    <th></th>
+                    <th>StyleGAN1</th>
+                    <th>StyleGAN2</th>
+                    <th>StyleGAN3</th>
+                    <th>iDDPM</th>
+                    <th>LDM (50)</th>
+                    <th>LDM (200)</th>
+                    <th>StyleSwin</th>
+                    <th>ProjectedGAN</th>
+                </tr>
+                <tr>
+                    <td><b>SaD (↓x10<sup>-7</sup>)</b></td>
+                    <td>11.35</td>
+                    <td><strong>7.52</strong></td>
+                    <td>7.79</td>
+                    <td>14.78</td>
+                    <td>10.42</td>
+                    <td>14.04</td>
+                    <td>10.76</td>
+                    <td>17.61</td>
+                </tr>
+                <tr>
+                    <td><b>PaD (↓x10<sup>-7</sup>)</b></td>
+                    <td>27.25</td>
+                    <td><strong>19.22</strong></td>
+                    <td>19.73</td>
+                    <td>34.04</td>
+                    <td>25.36</td>
+                    <td>30.71</td>
+                    <td>26.56</td>
+                    <td>41.53</td>
+                </tr>
+                <tr>
+                    <td>FID (↓)</td>
+                    <td>4.74</td>
+                    <td><strong>3.17</strong></td>
+                    <td>3.20</td>
+                    <td>7.31</td>
+                    <td>12.18</td>
+                    <td>11.86</td>
+                    <td>4.45</td>
+                    <td>5.45</td>
+                </tr>
+                <tr>
+                    <td>FID<sub>CLIP</sub> (↓)</td>
+                    <td>3.17</td>
+                    <td><strong>1.47</strong></td>
+                    <td>1.66</td>
+                    <td>2.39</td>
+                    <td>3.89</td>
+                    <td>3.57</td>
+                    <td>2.45</td>
+                    <td>3.63</td>
+                </tr>
+                <tr>
+                    <td>Precision (↑)</td>
+                    <td>0.90</td>
+                    <td>0.92</td>
+                    <td>0.92</td>
+                    <td>0.93</td>
+                    <td><strong>0.94</strong></td>
+                    <td>0.91</td>
+                    <td>0.92</td>
+                    <td>0.92</td>
+                </tr>
+                <tr>
+                    <td>Recall (↑)</td>
+                    <td>0.86</td>
+                    <td>0.89</td>
+                    <td>0.90</td>
+                    <td>0.84</td>
+                    <td>0.82</td>
+                    <td>0.88</td>
+                    <td>0.91</td>
+                    <td><strong>0.92</strong></td>
+                </tr>
+                <tr>
+                    <td>Density (↑)</td>
+                    <td>1.05</td>
+                    <td>1.03</td>
+                    <td>1.03</td>
+                    <td><strong>1.09</strong></td>
+                    <td>1.09</td>
+                    <td>1.07</td>
+                    <td>1.01</td>
+                    <td>1.05</td>
+                </tr>
+                <tr>
+                    <td>Coverage (↑)</td>
+                    <td>0.97</td>
+                    <td>0.97</td>
+                    <td>0.97</td>
+                    <td>0.95</td>
+                    <td>0.94</td>
+                    <td>0.97</td>
+                    <td>0.97</td>
+                    <td>0.97</td>
+                </tr>
+            </table>
+        </figure>
+    
+    
+        <p>
+            Leveraging the superior sensitivity and discernment of our proposed metrics, 
+            we evaluate the performance of GANs and Diffusion Models (DMs) in 
+            Table \( \ref{tab:gan_diff_blip} \). Generally, the tendency of SaD and PaD 
+            align with other existing metrics. However three notable points emerge;
+        </p>
+        <ol>
+            <li>
+                <strong>ProjectedGAN</strong> <a href="https://arxiv.org/abs/2107.00641" target="_blank">[Sauer et al., 2021]</a> lags in performance, having been criticized 
+                <a href="https://arxiv.org/abs/2202.11582" target="_blank">[Kynkäänniemi et al., 2022]</a> for not focusing on fidelity and only aiming to achieve a good FID score 
+                by training to match the training set's embedding statistics. Even though it exhibits satisfactory results in traditional metrics, 
+                it notably underperforms in SaD and especially PaD when evaluated by our measures. This indicates that mimicking the training set's embedding statistics directly 
+                does not necessarily capture the correlation of attributes on the training set. Figure \( \ref{fig:1d_2d_difference} \)b provides instances where ProjectedGAN falls short.
+            </li>
+
+            <figure class="center-figure">
+                <img src="imgs/ldm_sampling_step.png" alt="LDM comparison between 50 and 200 timesteps" class="center-image" />
+                <figcaption>
+                    <strong>LDM with 50 steps v.s. LDM with 200 timesteps.</strong> With increased sampling timesteps, 
+                    (a) SaD of LDM gets worse, 
+                    (b) since making too many fine objects such as <code>earrings</code> or <code>necklace</code>.
+                </figcaption>
+            </figure>
+            
+
+            <li>
+                Diffusion models typically yield better quality with increased sampling timesteps. However, SaD and PaD scores for LDM(200 steps) surpass those of LDM(50 steps). 
+                As illustrated in Figure \( \ref{fig:5} \), higher sampling timesteps in the LDM model produce more high-frequency elements, such as <code>necklaces</code> and <code>earrings</code>. 
+                This might elucidate the prevalence of attributes like <code>young, makeup, woman, wavy hair</code>. We posit that a dense sampling trajectory engenders more high-frequency objects.
+            </li>
+            <li>
+                Through a detailed analysis of SaD and PaD scores, we noticed divergent trends between the strengths and weaknesses of GANs and Diffusion models. To probe deeper, 
+                we exploited the versatility of constructing attributes, examining score variations based on attribute characteristics. Specifically, we built attributes 
+                focused on color (e.g., <code>yellow fur</code>, <code>black fur</code>) and on shape (e.g., <code>pointy ears</code>, <code>long tail</code>) within the LSUN Cat dataset.
+            </li>
+        </ol>
+        <p>
+            For more detailed insights and contextual understanding of the findings, 
+            we encourage reading the full 
+            <a href="your_paper_link_here" target="_blank">research paper</a>.
+        </p>
+    </section>
+
+    <section id="additional">
+        <h2>Comparative Analysis of Stable Diffusion Versions</h2>
+        <p>
+            Table <a href="#tab:stable">1</a> shows SDv1.5 has better attribute distribution than SDv2.1, 
+            being almost twice as superior. Intriguingly, all SaD top-rank attributes have negative mean differences, 
+            indicating that SDs tend to omit certain objects such as <code>group</code><sup><a href="#fn1" id="ref1">1</a></sup> or 
+            <code>plate</code><sup><a href="#fn2" id="ref2">2</a></sup>. Particularly, SDv2.1 faces challenges in generating multiple people. 
+            This concurs with common assertions about SDv2.1, even though it reports a better FID score. In certain instances, users have noted 
+            SDv2.1's inferior performance compared to SDv1.5<sup><a href="#fn3" id="ref3">3</a></sup>. More details are provided in 
+            Appendix <a href="#subsec:coco_detail">A.1</a>.
+        </p>
+        <table id="tab:stable">
+            <caption>
+                Table 1: The scores of SaD and PaD on Stable Diffusion. Stable Diffusion v1.5 is almost better than v2.1 almost twice. 
+                We generate 30k images using the caption of COCO. We use \( N_{\mathcal{A}}=30 \).
+            </caption>
+            <thead>
+                <tr>
+                    <th rowspan="2">\( N_{\mathcal{A}}=30 \)</th>
+                    <th rowspan="2">SaD (\(10^{-7}\))&darr;</th>
+                    <th rowspan="2">PaD (\(10^{-7}\))&darr;</th>
+                    <th colspan="3">SaD top-rank attr (mean difference)</th>
+                </tr>
+                <tr>
+                    <th>1st</th>
+                    <th>2nd</th>
+                    <th>3rd</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>SDv1.5</td>
+                    <td>24.37</td>
+                    <td>60.71</td>
+                    <td>plate (-1.9)</td>
+                    <td>group (-1.6)</td>
+                    <td>building (-1.6)</td>
+                </tr>
+                <tr>
+                    <td>SDv2.1</td>
+                    <td>48.23</td>
+                    <td>106.86</td>
+                    <td>group (-3.7)</td>
+                    <td>plate (-2.5)</td>
+                    <td>person (-2.7)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>
+            <sup id="fn1">1</sup> e.g., A group of people is standing around a large clock. <a href="#ref1" title="Jump back to footnote 1 in the text.">↩</a><br>
+            <sup id="fn2">2</sup> e.g., A table is set with two plates of food and a candle. <a href="#ref2" title="Jump back to footnote 2 in the text.">↩</a><br>
+            <sup id="fn3">3</sup> For example, some users have reported SDv2.1's lower performance compared to SDv1.5 in a blog post 
+            available at <a href="https://www.assemblyai.com/blog/stable-diffusion-1-vs-2-what-you-need-to-know/" target="_blank">AssemblyAI Blog</a>. 
+            <a href="#ref3" title="Jump back to footnote 3 in the text.">↩</a>
+        </p>
+    </section>
+    
+    <!-- Add more sections as per your need -->
+    <footer>
+        <p>Contact Information: your_email@example.com</p>
+    </footer>
+</body>
+</html>
